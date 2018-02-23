@@ -124,6 +124,15 @@ public:
 		
 		return isOver;
 	}
+	bool isValidMove(const Move& m)
+	{
+		if (m.amount < 1)
+			return false;
+		else if ( m.amount <= piles[m.pile])
+			return true;
+		else
+			return false;
+	}
 private:
 	// Variables
 	int maxObjects = 0;
@@ -175,6 +184,32 @@ void printGameType(GAMETYPE gt) {
 		cout << "Normal game style selected." << endl;
 }
 
+Move getHumanInput(NimBoard& n) {
+	Move move = { 0, 0 };
+	int moveChoice = 0;
+	bool validMove = false;
+
+	do {
+		cout << "Pile: ";
+		cin >> moveChoice;
+
+		if (moveChoice > 0 && moveChoice < 5) {
+			move.pile = moveChoice - 1;
+
+			cout << "Sticks: ";
+			cin >> moveChoice;
+			move.amount = moveChoice;
+
+			if (!(validMove = n.isValidMove(move)))
+				cout << "Invalid move, try again...." << endl;
+		}
+		else
+			cout << "Invalid pile, try again...." << endl;
+
+	} while (!validMove);
+
+	return move;
+}
 
 int main(int argc, char* arv[])
 {
@@ -191,81 +226,34 @@ int main(int argc, char* arv[])
 
     try
     {
-		cout << "NimAI: " << std::endl;
+		cout << "+-------------------------------------+" << endl;
+		cout << "|           Welcome to NimAI!         |" << endl;
+		cout << "+-------------------------------------+" << endl;
 		printGameType(gameType);
-
 		// Print the initial board and compute nimSum
 		nimBoard.print();
-		nimSum = nimBoard.getNimSum();
-		cout << "nimSum: " << nimSum << std::endl;
 
-		// Reduce pile 4 by 2 and re-compute nimSum
-		move.pile = 3; move.amount = 2;
-		nimBoard.update(move);
-		printMove(move, true);
-		nimBoard.print();
-		nimSum = nimBoard.getNimSum();
-		cout << "nimSum: " << nimSum << std::endl;
+		while (!nimBoard.isGameOver()) {
 
-		// Generate the best next move
-		move = nimBoard.getNextMove(gameType, nimSum);
-		printMove(move);
-		nimBoard.update(move);
-		nimBoard.print();
-		nimSum = nimBoard.getNimSum();
-		cout << "nimSum: " << nimSum << std::endl;
+			move = getHumanInput(nimBoard);
+			nimBoard.update(move);
+			printMove(move, true);
+			nimBoard.print();
+			nimSum = nimBoard.getNimSum();
+			cout << "nimSum: " << nimSum << std::endl;
 
-		// Reduce pile 3 by 3 and re-compute nimSum
-		move.pile = 2; move.amount = 3;
-		nimBoard.update(move);
-		printMove(move, true);
-		nimBoard.print();
-		nimSum = nimBoard.getNimSum();
-		cout << "nimSum: " << nimSum << std::endl;
+			// Generate the best next move
+			move = nimBoard.getNextMove(gameType, nimSum);
+			printMove(move);
+			nimBoard.update(move);
+			nimBoard.print();
+			nimSum = nimBoard.getNimSum();
+			cout << "nimSum: " << nimSum << std::endl;
 
-		// Generate the best next move
-		move = nimBoard.getNextMove(gameType, nimSum);
-		printMove(move);
-		nimBoard.update(move);
-		nimBoard.print();
-		nimSum = nimBoard.getNimSum();
-		cout << "nimSum: " << nimSum << std::endl;
-
-		// Reduce pile 3 by 2 and re-compute nimSum
-		move.pile = 2; move.amount = 2;
-		nimBoard.update(move);
-		printMove(move, true);
-		nimBoard.print();
-		nimSum = nimBoard.getNimSum();
-		cout << "nimSum: " << nimSum << std::endl;
-
-		// Generate the best next move
-		move = nimBoard.getNextMove(gameType, nimSum);
-		printMove(move);
-		nimBoard.update(move);
-		nimBoard.print();
-		nimSum = nimBoard.getNimSum();
-		cout << "nimSum: " << nimSum << std::endl;
-
-		// Reduce pile 1 by 1 and re-compute nimSum
-		move.pile = 0; move.amount = 1;
-		nimBoard.update(move);
-		printMove(move, true);
-		nimBoard.print();
-		nimSum = nimBoard.getNimSum();
-		cout << "nimSum: " << nimSum << std::endl;
-
-		// Generate the best next move
-		move = nimBoard.getNextMove(gameType, nimSum);
-		printMove(move);
-		nimBoard.update(move);
-		nimBoard.print();
-
-		if (nimBoard.isGameOver()) {
-			cout << "\nGame over!" << endl;
 		}
 
-		cout <<  "\nPress <enter> to continue.. " << std::endl;
+		cout << "\nGame over!" << endl;
+		cout << "\nPress <enter> to continue.. " << std::endl;
 		cin.get();
 
     }
