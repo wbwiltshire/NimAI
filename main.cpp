@@ -24,6 +24,7 @@ using std::cout;
 using std::endl;
 
 enum GAMETYPE { MISERE = 0, NORMAL = 1 };
+enum PLAYERTURN { PLAYER = 0, AI = 1 };
 
 struct Move {
 	int pile;
@@ -60,15 +61,28 @@ public:
 		int targetPile = 0;
 		int removeAmount = 0;
 		int pileMax = 0;
+		bool isOdd = false;
+		int movesLeft = 0;
 
 		switch (gameType) {
 		case MISERE:
 			if (isEndGame()) {
-				// take 1 from the biggest pile
+				// Leave an odd number of piles of 1
+				for (int p : piles)
+					if (p > 0)
+						movesLeft++;
+				isOdd = (movesLeft % 2 == 1);
 				pileMax = *std::max_element(std::begin(piles), std::end(piles));
-				 auto it = std::find(piles.begin(), piles.end(), pileMax);
-				 move.pile = it - piles.begin();	// convert to an index
-				 move.amount = 1;
+				if (isOdd && (pileMax == 1)) {
+					// No winning strategy, so generate random move
+					move = getRandomMove();
+				}
+				else {
+					auto it = std::find(piles.begin(), piles.end(), pileMax);	// file the pile with max
+					move.pile = it - piles.begin();	// convert to an index
+					move.amount = pileMax - (int)isOdd;
+				}
+			
 			}
 			else {
 				for (int pile : piles) {
@@ -88,8 +102,20 @@ public:
 			}
 			break;
 		case NORMAL:
-			move.pile = 2;
-			move.amount = 2;
+			for (int pile : piles) {
+				targetSize = pile ^ nimSum;
+				if (targetSize < pile) {
+					removeAmount = pile - targetSize;
+					move.pile = targetPile;
+					move.amount = removeAmount;
+					break;
+				}
+				else
+					targetPile++;
+			}
+			// If we can't find an optimal move, return a random one
+			if (removeAmount == 0)
+				move = getRandomMove();			
 			break;
 		}
 		return move;
@@ -141,13 +167,13 @@ private:
 	Move getRandomMove() {
 		Move move;
 		int pile = -1;
-		int object = -1;
+		int amount = -1;
 
 		cout << "Generating random move." << std::endl;
 
 		while (true) {
 			// pick a random pile between 0 and the number of piles
-			pile = rand() % ((int)piles.size() - 1);
+			pile = rand() % (int)piles.size();
 			//Only leave, if we pick a pile with objects
 			if (piles[pile] > 0)
 				break;
@@ -155,15 +181,23 @@ private:
 
 		move.pile = pile;
 		// generate a random number between 1 and number of objects in the pile
-		move.amount = 1 + (rand() % (int)piles[pile]);
+		amount = 1 + (rand() % (int)piles[pile]);
+		move.amount = amount > piles[pile] ? piles[pile] : amount;		// take amount if <= objects left
 
 		return move;
 	}
+	// For Misere games, EndGame is when there are <= 1 piles of 2 or more objects
 	bool isEndGame() {
+		int endGamePileCount = 0;
 		bool isEndGame = false;
+		// Return true, if all piles have 2 or less object left
+		for (int p : piles)
+		{
+			if (p > 1)
+				endGamePileCount++;
+		}
 
-		// If all piles have 2 or less object left
-		if (*std::max_element(std::begin(piles), std::end(piles)) <= 2)
+		if (endGamePileCount <= 1)
 			isEndGame = true;
 
 		return isEndGame;
@@ -182,6 +216,58 @@ void printGameType(GAMETYPE gt) {
 		cout << "Misere game style selected." << endl;
 	else
 		cout << "Normal game style selected." << endl;
+}
+
+GAMETYPE getGameType() {
+	bool validGameType = false;
+	GAMETYPE gameType;
+	int gameTypeChoice = 0;
+
+	do {
+		cout << "Enter game type(0=Misere, 1=Normal): ";
+		cin >> gameTypeChoice;
+
+		if (gameTypeChoice == 0 || gameTypeChoice == 1) {
+
+			if (gameTypeChoice == 0)
+				gameType = MISERE;
+			else
+				gameType = NORMAL;
+			
+			validGameType = true;
+		}
+		else
+			cout << "Invalid choice, try again...." << endl;
+
+	} while (!validGameType);
+
+	return gameType;
+}
+
+PLAYERTURN getFirstTurn() {
+	bool validPlayer = false;
+	PLAYERTURN firstTurn;
+	int playerChoice = 0;
+
+	do {
+		cout << "First to move(0=Player, 1=AI): ";
+		cin >> playerChoice;
+
+		if (playerChoice == 0 || playerChoice == 1) {
+
+			if (playerChoice == 0)
+				firstTurn = PLAYER;
+			else
+				firstTurn = AI;
+
+			validPlayer = true;
+		}
+		else
+			cout << "Invalid choice, try again...." << endl;
+
+	} while (!validPlayer);
+
+	return firstTurn;
 }
 
 Move getHumanInput(NimBoard& n) {
@@ -215,8 +301,9 @@ int main(int argc, char* arv[])
 {
 	Move move;
 	int nimSum = 0;
-	GAMETYPE gameType = MISERE;
+	GAMETYPE gameType;
 	int returnCode = 0;
+	PLAYERTURN turn;
 
 	// Setup initial board and compute nimSum
 	NimBoard nimBoard({ 1, 3, 5, 7 });
@@ -229,30 +316,43 @@ int main(int argc, char* arv[])
 		cout << "+-------------------------------------+" << endl;
 		cout << "|           Welcome to NimAI!         |" << endl;
 		cout << "+-------------------------------------+" << endl;
+		
+		gameType = getGameType();
 		printGameType(gameType);
+		turn = getFirstTurn();
+
 		// Print the initial board and compute nimSum
 		nimBoard.print();
 
 		while (!nimBoard.isGameOver()) {
 
-			move = getHumanInput(nimBoard);
-			nimBoard.update(move);
-			printMove(move, true);
-			nimBoard.print();
-			nimSum = nimBoard.getNimSum();
-			cout << "nimSum: " << nimSum << std::endl;
-
-			// Generate the best next move
-			move = nimBoard.getNextMove(gameType, nimSum);
-			printMove(move);
-			nimBoard.update(move);
-			nimBoard.print();
-			nimSum = nimBoard.getNimSum();
-			cout << "nimSum: " << nimSum << std::endl;
-
+			if (turn == PLAYER) {
+				move = getHumanInput(nimBoard);
+				nimBoard.update(move);
+				printMove(move, true);
+				nimBoard.print();
+				nimSum = nimBoard.getNimSum();
+				cout << "nimSum: " << nimSum << std::endl;
+				turn = AI;
+			}
+			else {
+				// Generate the best next move
+				move = nimBoard.getNextMove(gameType, nimSum);
+				printMove(move);
+				nimBoard.update(move);
+				nimBoard.print();
+				nimSum = nimBoard.getNimSum();
+				cout << "nimSum: " << nimSum << std::endl;
+				turn = PLAYER;
+			}
 		}
 
-		cout << "\nGame over!" << endl;
+		if (turn == PLAYER && gameType == MISERE)
+			cout << "\nGame over, Player has won!" << endl;
+		else if (turn == AI && gameType == NORMAL)
+			cout << "\nGame over, Player has won!" << endl;
+		else
+			cout << "\nGame over, AI has won!" << endl;
 		cout << "\nPress <enter> to continue.. " << std::endl;
 		cin.get();
 
