@@ -17,7 +17,7 @@ all: $(ODIR)\$(NN)
 .cpp{$(ODIR)}.obj: 
 	$(CC) $(CFLAGS) $** /Fo$@
 
-$(ODIR)\$(NN): $(ODIR)\main.obj
+$(ODIR)\$(NN): $(ODIR)\main.obj $(ODIR)\NimBoard.obj $(ODIR)\AlphaBeta.obj
 	$(LINK) $**  /out:$@ $(LFLAGS) $(LIBS)
 
 clean:
