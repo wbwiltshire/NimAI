@@ -29,6 +29,7 @@ enum PLAYERTURN { PLAYER = 0, AI = 1 };
 void printMove(Move m, bool human = false);
 void printGameType(GAMETYPE);
 GAMETYPE getGameType();
+AITYPE getAIType();
 PLAYERTURN getFirstTurn();
 Move getHumanInput(NimBoard&);
 
@@ -41,11 +42,14 @@ int main(int argc, char* arv[])
 	Move move;
 	int nimSum = 0;
 	GAMETYPE gameType;
-	int returnCode = 0;
 	PLAYERTURN turn;
+	AITYPE aiType;
+	int returnCode = 0;
+	int depth = 5;
 
-	// Setup initial board and compute nimSum
-	NimBoard nimBoard({ 1, 3, 5, 7 });
+	//NimBoard testBoard({ 1, 2, 2 }, 5, AITYPE::ALPHABETA);		// correct move is (1,1)
+	NimBoard testBoard({ 0, 2, 2 }, 5, AITYPE::ALPHABETA);      // correct move is (3,2)
+	move = testBoard.getNextMove(GAMETYPE::NORMAL, nimSum);
 
 	// Seed random number generator
 	srand(time(NULL));
@@ -57,10 +61,14 @@ int main(int argc, char* arv[])
 		cout << "+-------------------------------------+" << endl;
 		
 		gameType = getGameType();
+		aiType = getAIType();
 		printGameType(gameType);
 		turn = getFirstTurn();
 
 		system("cls");
+		// Setup initial board and compute nimSum
+		NimBoard nimBoard({ 1, 3, 5, 7 }, depth, aiType);
+
 		// Print the initial board and compute nimSum
 		nimBoard.print();
 
@@ -105,6 +113,7 @@ int main(int argc, char* arv[])
 
 	return returnCode;
 }
+
 #pragma region Helper functions
 
 void printMove(Move m, bool human) {
@@ -143,6 +152,31 @@ GAMETYPE getGameType() {
 	} while (!validGameType);
 
 	return gameType;
+}
+AITYPE getAIType() {
+	bool validAIType = false;
+	AITYPE aiType;
+	int aiTypeChoice = 0;
+
+	do {
+		cout << "Enter AI type(0=Algo, 1=AlphaBeta): ";
+		cin >> aiTypeChoice;
+
+		if (aiTypeChoice == 0 || aiTypeChoice == 1) {
+
+			if (aiTypeChoice == 0)
+				aiType = ALGO;
+			else
+				aiType = ALPHABETA;
+
+			validAIType = true;
+		}
+		else
+			cout << "Invalid choice, try again...." << endl;
+
+	} while (!validAIType);
+
+	return aiType;
 }
 PLAYERTURN getFirstTurn() {
 	bool validPlayer = false;

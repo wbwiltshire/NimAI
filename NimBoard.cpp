@@ -3,8 +3,11 @@
 using std::cout;
 using std::endl;
 
+// Forward function declarations
+std::string makeNodeName(std::vector<int>);
+
 // ctor
-NimBoard::NimBoard(std::vector<int> p) : piles(p) {
+NimBoard::NimBoard(std::vector<int> p, int d, AITYPE a) : piles(p), depth(d), ai(a) {
 	// Save the height of the biggest pile
 	maxObjects = *std::max_element(std::begin(piles), std::end(piles));
 }
@@ -69,20 +72,32 @@ Move NimBoard::getNextMove(GAMETYPE gameType, int nimSum) {
 		}
 		break;
 	case NORMAL:
-		for (int pile : piles) {
-			targetSize = pile ^ nimSum;
-			if (targetSize < pile) {
-				removeAmount = pile - targetSize;
-				move.pile = targetPile;
-				move.amount = removeAmount;
+		switch (ai) {
+			case ALGO:
+				for (int pile : piles) {
+					targetSize = pile ^ nimSum;
+					if (targetSize < pile) {
+						removeAmount = pile - targetSize;
+						move.pile = targetPile;
+						move.amount = removeAmount;
+						break;
+					}
+					else
+						targetPile++;
+				}
+				// If we can't find an optimal move, return a random one
+				if (removeAmount == 0)
+					move = getRandomMove();
 				break;
-			}
-			else
-				targetPile++;
+			case ALPHABETA:
+				int max = 0;
+				Tree* tree = buildTree();
+				Node* root = tree->nodes();
+				max = alphaBeta(root, depth, min, max, true);
+				move = getMaxMove(root, max);
+				delete root;
+				break;
 		}
-		// If we can't find an optimal move, return a random one
-		if (removeAmount == 0)
-			move = getRandomMove();
 		break;
 	}
 	return move;
@@ -165,4 +180,95 @@ bool NimBoard::isEndGame() {
 		isEndGame = true;
 
 	return isEndGame;
+}
+Tree* NimBoard::buildTree() {
+	Tree* tree;
+	int treeSize = 0;
+	Node* root = new Node("root", min);
+	root->piles = piles;
+
+	treeSize = buildLayer(root, depth);
+
+	tree = new Tree(root);
+	tree->size(treeSize);
+	return tree;
+}
+int NimBoard::buildLayer(Node* parent, int level) {
+	std::vector<int> newPile;
+	Node* node = nullptr;
+	int pile = 0;
+	int nodes = 0;
+
+	if (level == 0) {
+		return 0;
+	}
+	else {
+		// Build one ply / layer
+		for (int value : parent->piles) {
+			for (int remove = value; remove > 0; remove--)
+			{
+				newPile = parent->piles;
+				newPile[pile] = newPile[pile] - remove;
+				node = parent->AddChild(makeNodeName(newPile), max, newPile);
+				node->value = evaluator(newPile);
+				nodes += buildLayer(node, level - 1);
+				nodes++;
+			}
+			pile++;
+
+		}
+	}
+	return nodes;
+}
+Move NimBoard::getMaxMove(Node* n, int m) {
+	Move move = { 0, 0 };
+	Node* maxChild = nullptr;
+	int idx = 0;
+
+	// Find the first child maching the max
+	for (Node* c : n->children) {
+		if (c->value == m) {
+			maxChild = c;
+			break;
+		}
+	}
+	// The next move is the in the pile whose value doesn't match
+	for (int p : piles) {
+		if (p != maxChild->piles[idx]) {
+			move.pile = idx;
+			move.amount = p - maxChild->piles[idx];
+			break;
+		}
+		idx++;
+	}
+
+	return move;
+}
+int NimBoard::evaluator(std::vector<int> piles) {
+	int result = 0;
+	int nimSum = 0;
+
+	//Compute the NimSum
+	for (int pile : piles)
+		nimSum ^= pile;
+
+	// If last move, then AI won
+	if (*std::max_element(std::begin(piles), std::end(piles)) == 0)
+		result = 100;
+	else if (nimSum == 0)
+		result = 50;
+	else
+		result = min;
+
+	return result;
+}
+//Helper functions
+std::string makeNodeName(std::vector<int> list) {
+	std::stringbuf sb;
+	std::ostream os(&sb);		// assocate sb to output stream
+
+	for (int l : list) {
+		os << l << "-";
+	}
+	return sb.str().substr(0, sb.str().length() - 1);
 }

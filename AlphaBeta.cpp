@@ -12,12 +12,22 @@ Node::~Node() {
 		delete c;
 	}
 }
-Node& Node::AddChild(std::string n, int v) {
+Node* Node::AddChild(std::string n, int v, std::vector<int> p) {
 	child = new Node(n, v);
+	child->piles = p;
 	children.push_back(child);
-	return *this;
+	return child;
 }
 
+int Tree::size() {
+	return nodeCount;
+}
+void Tree::size(int s) {
+	nodeCount = s;
+}
+Node* Tree::nodes() {
+	return root;
+}
 
 // AlphaBeta Pruning function
 int alphaBeta(Node* node, int depth, int alpha, int beta, bool isMax) {
